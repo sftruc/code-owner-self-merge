@@ -183,10 +183,17 @@ class Actor {
       return
     }
 
+    const wiRegex = /^@W-[0-9]{7,9}@\ .+/
+    const pr = context.payload.pull_request
+    if (pr.title.match(wiRegex) == null) {
+      await octokit.issues.createComment({ ...thisRepo, issue_number: issue.number, body: `Sorry @${sender}, the title of this PR does not start with '@W-[0-9]{7,9}@' - Got: [${pr.title}] - Aborting PR merge!` });
+      return
+    }
+
     core.info(`Creating comments and merging`)
     try {
       // @ts-ignore
-      await octokit.pulls.merge({ ...thisRepo, pull_number: issue.number, merge_method: core.getInput('merge_method') || 'merge' });
+      await octokit.pulls.merge({ ...thisRepo, pull_number: issue.number, commit_title: pr.title, commit_message: '_Automatically merged with a GitHub action._', merge_method: core.getInput('merge_method') || 'merge' });
       await octokit.issues.createComment({ ...thisRepo, issue_number: issue.number, body: `Merging because @${sender} is a code-owner of all the changes - thanks!` });
     } catch (error) {
       core.info(`Merging (or commenting) failed:`)
